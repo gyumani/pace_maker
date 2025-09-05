@@ -9,6 +9,17 @@ interface PaceRow {
   sectionTime: string;
   cumulativeTime: string;
   runningAvg: string;
+  targetHeartRate?: string;
+  intensityZone?: string;
+}
+
+interface UserProfile {
+  height: number;
+  weight: number;
+  age: number;
+  vo2max: number;
+  bmi?: number;
+  maxHeartRate?: number;
 }
 
 function App() {
@@ -18,6 +29,13 @@ function App() {
   const [totalDistance, setTotalDistance] = useState('1km');
   const [totalTime, setTotalTime] = useState('00:00');
   const [avgPace, setAvgPace] = useState('00:00');
+  const [userProfile, setUserProfile] = useState<UserProfile>({
+    height: 0,
+    weight: 0,
+    age: 0,
+    vo2max: 0
+  });
+  const [showProfile, setShowProfile] = useState(false);
 
   const parseTimeToSeconds = useCallback((timeStr: string): number => {
     if (!timeStr || timeStr.trim() === '') return 0;
@@ -51,9 +69,53 @@ function App() {
     return seconds < 60 && minutes >= 0;
   }, []);
 
+  const calculateBMI = useCallback((height: number, weight: number): number => {
+    if (height === 0 || weight === 0) return 0;
+    const heightInM = height / 100;
+    return Math.round((weight / (heightInM * heightInM)) * 10) / 10;
+  }, []);
+
+  const calculateMaxHeartRate = useCallback((age: number): number => {
+    return 220 - age;
+  }, []);
+
+  const calculateTargetHeartRate = useCallback((maxHR: number, vo2max: number, paceSeconds: number): { rate: number; zone: string } => {
+    if (maxHR === 0 || vo2max === 0 || paceSeconds === 0) return { rate: 0, zone: '-' };
+    
+    // 페이스를 기반으로 운동 강도 추정 (매우 단순화된 방식)
+    const restingHR = 60; // 기본 안정시 심박수
+    let intensity = 0;
+    
+    // 페이스에 따른 강도 구간 (분:초당 km)
+    if (paceSeconds <= 240) { // 4분 이하 - 최대 강도
+      intensity = 0.9;
+    } else if (paceSeconds <= 300) { // 4-5분 - 고강도
+      intensity = 0.8;
+    } else if (paceSeconds <= 360) { // 5-6분 - 중고강도
+      intensity = 0.7;
+    } else if (paceSeconds <= 420) { // 6-7분 - 중강도
+      intensity = 0.6;
+    } else { // 7분 이상 - 저중강도
+      intensity = 0.5;
+    }
+    
+    const targetHR = Math.round(restingHR + (maxHR - restingHR) * intensity);
+    
+    // 강도 구간 분류
+    let zone = '';
+    if (intensity >= 0.9) zone = 'Zone 5 (최대)';
+    else if (intensity >= 0.8) zone = 'Zone 4 (고강도)';
+    else if (intensity >= 0.7) zone = 'Zone 3 (중고강도)';
+    else if (intensity >= 0.6) zone = 'Zone 2 (중강도)';
+    else zone = 'Zone 1 (저강도)';
+    
+    return { rate: targetHR, zone };
+  }, []);
+
   useEffect(() => {
     let cumulativeSeconds = 0;
     let validPaces = 0;
+    const maxHR = userProfile.age > 0 ? calculateMaxHeartRate(userProfile.age) : 0;
     
     const updatedRows = rows.map((row, index) => {
       if (row.pace && validatePaceInput(row.pace)) {
@@ -68,15 +130,24 @@ function App() {
         const newCumulativeTime = formatSecondsToTime(cumulativeSeconds);
         const newRunningAvg = formatSecondsToTime(avgSeconds);
         
+        // 심박수 계산
+        const hrData = calculateTargetHeartRate(maxHR, userProfile.vo2max, sectionSeconds);
+        const newTargetHeartRate = hrData.rate > 0 ? `${hrData.rate}bpm` : '-';
+        const newIntensityZone = hrData.zone;
+        
         // 값이 변경된 경우에만 업데이트
         if (row.sectionTime !== newSectionTime || 
             row.cumulativeTime !== newCumulativeTime || 
-            row.runningAvg !== newRunningAvg) {
+            row.runningAvg !== newRunningAvg ||
+            row.targetHeartRate !== newTargetHeartRate ||
+            row.intensityZone !== newIntensityZone) {
           return {
             ...row,
             sectionTime: newSectionTime,
             cumulativeTime: newCumulativeTime,
-            runningAvg: newRunningAvg
+            runningAvg: newRunningAvg,
+            targetHeartRate: newTargetHeartRate,
+            intensityZone: newIntensityZone
           };
         }
         return row;
@@ -84,12 +155,16 @@ function App() {
         const newCumulativeTime = cumulativeSeconds > 0 ? formatSecondsToTime(cumulativeSeconds) : '00:00';
         if (row.sectionTime !== '00:00' || 
             row.cumulativeTime !== newCumulativeTime || 
-            row.runningAvg !== '00:00') {
+            row.runningAvg !== '00:00' ||
+            row.targetHeartRate !== '-' ||
+            row.intensityZone !== '-') {
           return {
             ...row,
             sectionTime: '00:00',
             cumulativeTime: newCumulativeTime,
-            runningAvg: '00:00'
+            runningAvg: '00:00',
+            targetHeartRate: '-',
+            intensityZone: '-'
           };
         }
         return row;
@@ -109,7 +184,7 @@ function App() {
     if (totalDistance !== newTotalDistance) setTotalDistance(newTotalDistance);
     if (totalTime !== newTotalTime) setTotalTime(newTotalTime);
     if (avgPace !== newAvgPace) setAvgPace(newAvgPace);
-  }, [rows, parseTimeToSeconds, formatSecondsToTime, validatePaceInput, totalDistance, totalTime, avgPace]);
+  }, [rows, parseTimeToSeconds, formatSecondsToTime, validatePaceInput, totalDistance, totalTime, avgPace, userProfile, calculateMaxHeartRate, calculateTargetHeartRate]);
 
   const addRow = useCallback(() => {
     const newKm = rows.length + 1;
@@ -179,15 +254,39 @@ function App() {
     ));
   };
 
+  const updateUserProfile = (field: keyof UserProfile, value: number) => {
+    const updatedProfile = { ...userProfile, [field]: value };
+    
+    // BMI 자동 계산
+    if (field === 'height' || field === 'weight') {
+      updatedProfile.bmi = calculateBMI(updatedProfile.height, updatedProfile.weight);
+    }
+    
+    // 최대 심박수 자동 계산
+    if (field === 'age') {
+      updatedProfile.maxHeartRate = calculateMaxHeartRate(updatedProfile.age);
+    }
+    
+    setUserProfile(updatedProfile);
+  };
+
   const exportToExcel = useCallback(() => {
     const data = [];
     
     // 헤더 추가
-    data.push(['거리(km)', '페이스(분:초)', '구간시간', '누적시간', '평균페이스']);
+    data.push(['거리(km)', '페이스(분:초)', '구간시간', '누적시간', '평균페이스', '목표심박수', '강도구간']);
     
     // 데이터 행 추가
     rows.forEach((row) => {
-      data.push([row.km, row.pace, row.sectionTime, row.cumulativeTime, row.runningAvg]);
+      data.push([
+        row.km, 
+        row.pace, 
+        row.sectionTime, 
+        row.cumulativeTime, 
+        row.runningAvg,
+        row.targetHeartRate || '-',
+        row.intensityZone || '-'
+      ]);
     });
     
     // 요약 정보 추가
@@ -196,6 +295,18 @@ function App() {
     data.push(['총 거리', totalDistance]);
     data.push(['총 시간', totalTime]);
     data.push(['전체 평균 페이스', avgPace]);
+    
+    // 사용자 프로필 정보 추가 (있는 경우)
+    if (userProfile.age > 0 || userProfile.height > 0 || userProfile.weight > 0 || userProfile.vo2max > 0) {
+      data.push([]);
+      data.push(['사용자 프로필']);
+      if (userProfile.height > 0) data.push(['키', `${userProfile.height}cm`]);
+      if (userProfile.weight > 0) data.push(['체중', `${userProfile.weight}kg`]);
+      if (userProfile.age > 0) data.push(['나이', `${userProfile.age}세`]);
+      if (userProfile.vo2max > 0) data.push(['VO2Max', userProfile.vo2max]);
+      if (userProfile.bmi && userProfile.bmi > 0) data.push(['BMI', userProfile.bmi]);
+      if (userProfile.maxHeartRate && userProfile.maxHeartRate > 0) data.push(['최대 심박수', `${userProfile.maxHeartRate}bpm`]);
+    }
     
     // Excel 파일 생성
     const wb = XLSX.utils.book_new();
@@ -207,7 +318,9 @@ function App() {
       {wch: 15}, // 페이스
       {wch: 12}, // 구간시간
       {wch: 12}, // 누적시간
-      {wch: 15}  // 평균페이스
+      {wch: 15}, // 평균페이스
+      {wch: 15}, // 목표심박수
+      {wch: 20}  // 강도구간
     ];
     
     // 시트 추가
@@ -222,7 +335,7 @@ function App() {
     
     // 파일 다운로드
     XLSX.writeFile(wb, filename);
-  }, [rows, totalDistance, totalTime, avgPace]);
+  }, [rows, totalDistance, totalTime, avgPace, userProfile]);
 
   // 키보드 단축키 처리
   useEffect(() => {
@@ -256,6 +369,9 @@ function App() {
         <button onClick={addRow} className="btn btn-primary">
           ➕ 구간 추가
         </button>
+        <button onClick={() => setShowProfile(!showProfile)} className="btn btn-secondary">
+          👤 프로필 설정
+        </button>
         <button onClick={exportToExcel} className="btn btn-secondary">
           📊 엑셀로 내보내기
         </button>
@@ -263,6 +379,66 @@ function App() {
           🗑️ 전체 삭제
         </button>
       </div>
+
+      {showProfile && (
+        <div className="profile-section">
+          <h3>🏃‍♂️ 사용자 프로필</h3>
+          <div className="profile-inputs">
+            <div className="input-group">
+              <label>키 (cm):</label>
+              <input 
+                type="number" 
+                value={userProfile.height || ''} 
+                onChange={(e) => updateUserProfile('height', Number(e.target.value))}
+                placeholder="170"
+              />
+            </div>
+            <div className="input-group">
+              <label>체중 (kg):</label>
+              <input 
+                type="number" 
+                value={userProfile.weight || ''} 
+                onChange={(e) => updateUserProfile('weight', Number(e.target.value))}
+                placeholder="70"
+              />
+            </div>
+            <div className="input-group">
+              <label>나이:</label>
+              <input 
+                type="number" 
+                value={userProfile.age || ''} 
+                onChange={(e) => updateUserProfile('age', Number(e.target.value))}
+                placeholder="30"
+              />
+            </div>
+            <div className="input-group">
+              <label>VO2Max:</label>
+              <input 
+                type="number" 
+                value={userProfile.vo2max || ''} 
+                onChange={(e) => updateUserProfile('vo2max', Number(e.target.value))}
+                placeholder="45"
+              />
+            </div>
+          </div>
+          {userProfile.bmi && userProfile.bmi > 0 && (
+            <div className="calculated-values">
+              <div className="calc-item">
+                <strong>BMI:</strong> {userProfile.bmi}
+                {userProfile.bmi < 18.5 && <span className="bmi-status"> (저체중)</span>}
+                {userProfile.bmi >= 18.5 && userProfile.bmi < 25 && <span className="bmi-status"> (정상)</span>}
+                {userProfile.bmi >= 25 && userProfile.bmi < 30 && <span className="bmi-status"> (과체중)</span>}
+                {userProfile.bmi >= 30 && <span className="bmi-status"> (비만)</span>}
+              </div>
+              {userProfile.maxHeartRate && (
+                <div className="calc-item">
+                  <strong>최대 심박수:</strong> {userProfile.maxHeartRate}bpm
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="summary-cards">
         <div className="card">
@@ -288,6 +464,8 @@ function App() {
               <th>구간시간</th>
               <th>누적시간</th>
               <th>평균페이스</th>
+              <th>목표심박수</th>
+              <th>강도구간</th>
               <th>삭제</th>
             </tr>
           </thead>
@@ -323,6 +501,8 @@ function App() {
                 <td className="section-time">{row.sectionTime}</td>
                 <td className="cumulative-time">{row.cumulativeTime}</td>
                 <td className="running-avg">{row.runningAvg}</td>
+                <td className="heart-rate">{row.targetHeartRate || '-'}</td>
+                <td className="intensity-zone">{row.intensityZone || '-'}</td>
                 <td>
                   <button 
                     className="btn-delete"
@@ -342,8 +522,10 @@ function App() {
         <ul>
           <li><strong>페이스 입력:</strong> "4:30" 또는 "430" 형식으로 입력 (4분 30초)</li>
           <li><strong>빠른 입력:</strong> Enter 키로 다음 구간으로 이동, 마지막에서 Enter시 구간 추가</li>
+          <li><strong>프로필 설정:</strong> 키/체중/나이/VO2Max를 입력하면 BMI와 목표 심박수가 자동 계산됩니다</li>
+          <li><strong>심박수 계산:</strong> 페이스에 따라 운동 강도별 목표 심박수가 자동으로 표시됩니다</li>
           <li><strong>구간 추가:</strong> "구간 추가" 버튼 또는 Ctrl/Cmd+N</li>
-          <li><strong>자동 계산:</strong> 누적시간과 평균페이스가 실시간으로 계산됩니다</li>
+          <li><strong>자동 계산:</strong> 누적시간, 평균페이스, 심박수가 실시간으로 계산됩니다</li>
           <li><strong>엑셀 내보내기:</strong> 계산 결과를 Excel 파일로 다운로드 (Ctrl/Cmd+S)</li>
         </ul>
       </div>
