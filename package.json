@@ -1,7 +1,9 @@
 {
-  "name": "react-app",
-  "version": "0.1.0",
+  "name": "pace-calculator",
+  "version": "1.0.0",
   "private": true,
+  "description": "각 구간별 페이스를 입력하여 전체 런닝 전략을 계획할 수 있는 Pace 전략 계산기",
+  "keywords": ["pace", "running", "calculator", "marathon", "racing"],
   "dependencies": {
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.8.0",
@@ -15,7 +17,8 @@
     "react-dom": "^19.1.1",
     "react-scripts": "5.0.1",
     "typescript": "^4.9.5",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^2.1.4",
+    "xlsx": "^0.18.5"
   },
   "scripts": {
     "start": "react-scripts start",
