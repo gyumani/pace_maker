@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import * as XLSX from 'xlsx';
+import * as XLSX from 'sheetjs-style';
 import './App.css';
 
 interface PaceRow {
