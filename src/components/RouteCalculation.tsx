@@ -99,7 +99,7 @@ export default function RouteCalculation({ userProfile }: RouteCalculationProps)
       return () => {
         map.off('click', handleClick);
       };
-    }, [map, clickMode, waypoints]);
+    }, [map]);
 
     return null;
   };
