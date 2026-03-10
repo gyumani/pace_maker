@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import * as XLSX from 'sheetjs-style';
+import RouteCalculation from './components/RouteCalculation';
 import './App.css';
 
 interface PaceRow {
@@ -20,9 +21,13 @@ interface UserProfile {
   vo2max: number;
   bmi?: number;
   maxHeartRate?: number;
+  restingHR?: number;
 }
 
+type TabMode = 'general' | 'route';
+
 function App() {
+  const [tabMode, setTabMode] = useState<TabMode>('general');
   const [rows, setRows] = useState<PaceRow[]>([
     { id: 1, km: 1, pace: '', sectionTime: '00:00', cumulativeTime: '00:00', runningAvg: '00:00' }
   ]);
@@ -33,7 +38,8 @@ function App() {
     height: 0,
     weight: 0,
     age: 0,
-    vo2max: 0
+    vo2max: 0,
+    restingHR: 60
   });
   const [showProfile, setShowProfile] = useState(false);
 
@@ -362,15 +368,119 @@ function App() {
     <div className="container">
       <header>
         <h1>🏃‍♂️ Pace 전략 계산기</h1>
-        <p>각 구간별 페이스를 입력하여 전체 런닝 전략을 계획하세요</p>
+        <p>각 구간별 페이스를 입력하거나 경로를 선택하여 런닝 전략을 계획하세요</p>
       </header>
 
-      <div className="controls">
+      {/* 공통 프로필 섹션 */}
+      <div style={{ marginBottom: '20px' }}>
+        <button
+          onClick={() => setShowProfile(!showProfile)}
+          className="btn btn-secondary"
+          style={{ marginBottom: '10px' }}
+        >
+          👤 프로필 {showProfile ? '숨기기' : '설정'}
+        </button>
+
+        {showProfile && (
+          <div className="profile-section">
+            <h3>🏃‍♂️ 사용자 프로필</h3>
+            <div className="profile-inputs">
+              <div className="input-group">
+                <label>키 (cm):</label>
+                <input
+                  type="number"
+                  value={userProfile.height || ''}
+                  onChange={(e) => updateUserProfile('height', Number(e.target.value))}
+                  placeholder="170"
+                />
+              </div>
+              <div className="input-group">
+                <label>체중 (kg):</label>
+                <input
+                  type="number"
+                  value={userProfile.weight || ''}
+                  onChange={(e) => updateUserProfile('weight', Number(e.target.value))}
+                  placeholder="70"
+                />
+              </div>
+              <div className="input-group">
+                <label>나이:</label>
+                <input
+                  type="number"
+                  value={userProfile.age || ''}
+                  onChange={(e) => updateUserProfile('age', Number(e.target.value))}
+                  placeholder="30"
+                />
+              </div>
+              <div className="input-group">
+                <label>VO2Max:</label>
+                <input
+                  type="number"
+                  value={userProfile.vo2max || ''}
+                  onChange={(e) => updateUserProfile('vo2max', Number(e.target.value))}
+                  placeholder="45"
+                />
+              </div>
+            </div>
+            {userProfile.bmi && userProfile.bmi > 0 && (
+              <div className="calculated-values">
+                <div className="calc-item">
+                  <strong>BMI:</strong> {userProfile.bmi}
+                  {userProfile.bmi < 18.5 && <span className="bmi-status"> (저체중)</span>}
+                  {userProfile.bmi >= 18.5 && userProfile.bmi < 25 && <span className="bmi-status"> (정상)</span>}
+                  {userProfile.bmi >= 25 && userProfile.bmi < 30 && <span className="bmi-status"> (과체중)</span>}
+                  {userProfile.bmi >= 30 && <span className="bmi-status"> (비만)</span>}
+                </div>
+                {userProfile.maxHeartRate && (
+                  <div className="calc-item">
+                    <strong>최대 심박수:</strong> {userProfile.maxHeartRate}bpm
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* 탭 전환 UI */}
+      <div style={{
+        display: 'flex',
+        gap: '10px',
+        marginBottom: '20px',
+        borderBottom: '2px solid #e9ecef',
+        paddingBottom: '10px'
+      }}>
+        <button
+          onClick={() => setTabMode('general')}
+          className={`btn ${tabMode === 'general' ? 'btn-primary' : 'btn-secondary'}`}
+          style={{
+            flex: 1,
+            padding: '15px',
+            fontSize: '1.1em',
+            fontWeight: 'bold'
+          }}
+        >
+          📊 일반계산
+        </button>
+        <button
+          onClick={() => setTabMode('route')}
+          className={`btn ${tabMode === 'route' ? 'btn-primary' : 'btn-secondary'}`}
+          style={{
+            flex: 1,
+            padding: '15px',
+            fontSize: '1.1em',
+            fontWeight: 'bold'
+          }}
+        >
+          🗺️ 경로계산
+        </button>
+      </div>
+
+      {tabMode === 'general' ? (
+        <>
+          <div className="controls">
         <button onClick={addRow} className="btn btn-primary">
           ➕ 구간 추가
-        </button>
-        <button onClick={() => setShowProfile(!showProfile)} className="btn btn-secondary">
-          👤 프로필 설정
         </button>
         <button onClick={exportToExcel} className="btn btn-secondary">
           📊 엑셀로 내보내기
@@ -379,66 +489,6 @@ function App() {
           🗑️ 전체 삭제
         </button>
       </div>
-
-      {showProfile && (
-        <div className="profile-section">
-          <h3>🏃‍♂️ 사용자 프로필</h3>
-          <div className="profile-inputs">
-            <div className="input-group">
-              <label>키 (cm):</label>
-              <input 
-                type="number" 
-                value={userProfile.height || ''} 
-                onChange={(e) => updateUserProfile('height', Number(e.target.value))}
-                placeholder="170"
-              />
-            </div>
-            <div className="input-group">
-              <label>체중 (kg):</label>
-              <input 
-                type="number" 
-                value={userProfile.weight || ''} 
-                onChange={(e) => updateUserProfile('weight', Number(e.target.value))}
-                placeholder="70"
-              />
-            </div>
-            <div className="input-group">
-              <label>나이:</label>
-              <input 
-                type="number" 
-                value={userProfile.age || ''} 
-                onChange={(e) => updateUserProfile('age', Number(e.target.value))}
-                placeholder="30"
-              />
-            </div>
-            <div className="input-group">
-              <label>VO2Max:</label>
-              <input 
-                type="number" 
-                value={userProfile.vo2max || ''} 
-                onChange={(e) => updateUserProfile('vo2max', Number(e.target.value))}
-                placeholder="45"
-              />
-            </div>
-          </div>
-          {userProfile.bmi && userProfile.bmi > 0 && (
-            <div className="calculated-values">
-              <div className="calc-item">
-                <strong>BMI:</strong> {userProfile.bmi}
-                {userProfile.bmi < 18.5 && <span className="bmi-status"> (저체중)</span>}
-                {userProfile.bmi >= 18.5 && userProfile.bmi < 25 && <span className="bmi-status"> (정상)</span>}
-                {userProfile.bmi >= 25 && userProfile.bmi < 30 && <span className="bmi-status"> (과체중)</span>}
-                {userProfile.bmi >= 30 && <span className="bmi-status"> (비만)</span>}
-              </div>
-              {userProfile.maxHeartRate && (
-                <div className="calc-item">
-                  <strong>최대 심박수:</strong> {userProfile.maxHeartRate}bpm
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
 
       <div className="summary-cards">
         <div className="card">
@@ -529,6 +579,27 @@ function App() {
           <li><strong>엑셀 내보내기:</strong> 계산 결과를 Excel 파일로 다운로드 (Ctrl/Cmd+S)</li>
         </ul>
       </div>
+        </>
+      ) : (
+        <>
+          {/* 경로 계산 컴포넌트 */}
+          {userProfile.age > 0 && userProfile.vo2max > 0 ? (
+            <RouteCalculation userProfile={{
+              age: userProfile.age,
+              weight: userProfile.weight,
+              height: userProfile.height,
+              restingHR: userProfile.restingHR || 60,
+              maxHR: userProfile.maxHeartRate || calculateMaxHeartRate(userProfile.age),
+              vo2max: userProfile.vo2max
+            }} />
+          ) : (
+            <div className="instructions">
+              <h3>⚠️ 프로필 설정 필요</h3>
+              <p>경로 계산을 사용하려면 위의 "프로필 설정" 버튼을 클릭하여 나이와 VO2Max를 입력해주세요.</p>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
