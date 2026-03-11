@@ -121,11 +121,11 @@ class PaceStrategyService {
     // 전략별 조정
     switch (strategy) {
       case 'best':
-        return basePaceSeconds * 0.90; // 10% 빠르게
+        return basePaceSeconds; // 기본 페이스 (최적의 페이스)
       case 'average':
-        return basePaceSeconds;
+        return basePaceSeconds * 1.10; // 10% 느리게 (여유있는 페이스)
       case 'worst':
-        return basePaceSeconds * 1.15; // 15% 느리게
+        return basePaceSeconds * 1.25; // 25% 느리게 (안전하고 편안한 페이스)
       default:
         return basePaceSeconds;
     }
@@ -204,7 +204,7 @@ class PaceStrategyService {
     let adjustmentFactor = 1.0;
 
     // 전략별 조정 강도
-    const strategyMultiplier = strategy === 'best' ? 0.8 : strategy === 'worst' ? 1.2 : 1.0;
+    const strategyMultiplier = strategy === 'best' ? 1.0 : strategy === 'worst' ? 1.3 : 1.1;
 
     // 오르막 영향 (더 느리게)
     if (elevationGain > 0) {

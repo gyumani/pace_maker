@@ -70,6 +70,17 @@ export default function RouteCalculation({ userProfile }: RouteCalculationProps)
   const [selectedStrategy, setSelectedStrategy] = useState<PaceStrategy>('average');
   const [strategies, setStrategies] = useState<RouteCalculationResult[]>([]);
   const [clickMode, setClickMode] = useState<'start' | 'waypoint' | 'end'>('start');
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  // 화면 크기 감지
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // 지도 클릭 핸들러
   const MapClickHandler = () => {
@@ -177,11 +188,23 @@ export default function RouteCalculation({ userProfile }: RouteCalculationProps)
   const currentStrategy = strategies.find(s => s.strategy === selectedStrategy);
 
   return (
-    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', gap: isMobile ? '15px' : '20px' }}>
       {/* 지도 및 컨트롤 */}
-      <div style={{ display: 'flex', gap: '20px', height: '500px' }}>
+      <div style={{
+        display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
+        gap: isMobile ? '15px' : '20px',
+        minHeight: isMobile ? 'auto' : '500px'
+      }}>
         {/* 지도 */}
-        <div style={{ flex: '1', position: 'relative', border: '2px solid #ddd', borderRadius: '8px', overflow: 'hidden' }}>
+        <div style={{
+          flex: isMobile ? 'none' : '1',
+          height: isMobile ? '400px' : '500px',
+          position: 'relative',
+          border: '2px solid #ddd',
+          borderRadius: '8px',
+          overflow: 'hidden'
+        }}>
           <MapContainer
             center={center}
             zoom={13}
@@ -288,7 +311,14 @@ export default function RouteCalculation({ userProfile }: RouteCalculationProps)
         </div>
 
         {/* 컨트롤 패널 */}
-        <div style={{ width: '320px', padding: '20px', background: '#f8f9fa', borderRadius: '8px', maxHeight: '500px', overflowY: 'auto' }}>
+        <div style={{
+          width: isMobile ? '100%' : '320px',
+          padding: isMobile ? '15px' : '20px',
+          background: '#f8f9fa',
+          borderRadius: '8px',
+          maxHeight: isMobile ? 'none' : '500px',
+          overflowY: isMobile ? 'visible' : 'auto'
+        }}>
           <h3 style={{ marginTop: 0 }}>경로 설정</h3>
 
           <div style={{ marginBottom: '15px' }}>
@@ -310,28 +340,28 @@ export default function RouteCalculation({ userProfile }: RouteCalculationProps)
               <button
                 onClick={() => setClickMode('start')}
                 className={`btn ${clickMode === 'start' ? 'btn-primary' : 'btn-secondary'}`}
-                style={{ flex: 1, padding: '8px', fontSize: '0.9em' }}
+                style={{ flex: 1, padding: isMobile ? '12px' : '8px', fontSize: isMobile ? '1em' : '0.9em', minHeight: isMobile ? '44px' : 'auto' }}
               >
                 출발지
               </button>
               <button
                 onClick={() => setClickMode('waypoint')}
                 className={`btn ${clickMode === 'waypoint' ? 'btn-primary' : 'btn-secondary'}`}
-                style={{ flex: 1, padding: '8px', fontSize: '0.9em' }}
+                style={{ flex: 1, padding: isMobile ? '12px' : '8px', fontSize: isMobile ? '1em' : '0.9em', minHeight: isMobile ? '44px' : 'auto' }}
               >
                 경유지
               </button>
               <button
                 onClick={() => setClickMode('end')}
                 className={`btn ${clickMode === 'end' ? 'btn-primary' : 'btn-secondary'}`}
-                style={{ flex: 1, padding: '8px', fontSize: '0.9em' }}
+                style={{ flex: 1, padding: isMobile ? '12px' : '8px', fontSize: isMobile ? '1em' : '0.9em', minHeight: isMobile ? '44px' : 'auto' }}
               >
                 도착지
               </button>
             </div>
 
             {startPoint && (
-              <div style={{ fontSize: '0.85em', marginBottom: '5px', padding: '5px', background: '#e8f5e9', borderRadius: '4px' }}>
+              <div style={{ fontSize: '0.85em', marginBottom: '5px', padding: '5px', background: '#e8f5e9', borderRadius: '4px', color: '#333' }}>
                 ✅ <strong>출발지:</strong> {startPoint.lat.toFixed(4)}, {startPoint.lng.toFixed(4)}
               </div>
             )}
@@ -347,7 +377,8 @@ export default function RouteCalculation({ userProfile }: RouteCalculationProps)
                     borderRadius: '4px',
                     display: 'flex',
                     justifyContent: 'space-between',
-                    alignItems: 'center'
+                    alignItems: 'center',
+                    color: '#333'
                   }}>
                     <span>🟡 경유지 {idx + 1}: {wp.lat.toFixed(4)}, {wp.lng.toFixed(4)}</span>
                     <button
@@ -370,7 +401,7 @@ export default function RouteCalculation({ userProfile }: RouteCalculationProps)
             )}
 
             {endPoint && (
-              <div style={{ fontSize: '0.85em', marginBottom: '5px', padding: '5px', background: '#ffebee', borderRadius: '4px' }}>
+              <div style={{ fontSize: '0.85em', marginBottom: '5px', padding: '5px', background: '#ffebee', borderRadius: '4px', color: '#333' }}>
                 ✅ <strong>도착지:</strong> {endPoint.lat.toFixed(4)}, {endPoint.lng.toFixed(4)}
               </div>
             )}
@@ -426,21 +457,30 @@ export default function RouteCalculation({ userProfile }: RouteCalculationProps)
       {strategies.length > 0 && (
         <div style={{ marginTop: '20px' }}>
           <h3>페이스 전략 선택</h3>
-          <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+          <div style={{
+            display: 'flex',
+            flexDirection: isMobile ? 'column' : 'row',
+            gap: '10px',
+            marginBottom: '20px'
+          }}>
             {strategies.map((strategy) => (
               <button
                 key={strategy.strategy}
                 onClick={() => setSelectedStrategy(strategy.strategy)}
                 className={`btn ${selectedStrategy === strategy.strategy ? 'btn-primary' : 'btn-secondary'}`}
-                style={{ flex: 1 }}
+                style={{
+                  flex: isMobile ? 'none' : 1,
+                  minHeight: isMobile ? '80px' : 'auto',
+                  padding: isMobile ? '15px' : '12px'
+                }}
               >
                 {strategy.strategy === 'best' && '🏆 최상 전략'}
                 {strategy.strategy === 'average' && '⚖️ 평균 전략'}
                 {strategy.strategy === 'worst' && '🐢 안전 전략'}
-                <div style={{ fontSize: '0.8em', marginTop: '5px' }}>
+                <div style={{ fontSize: isMobile ? '0.9em' : '0.8em', marginTop: '5px' }}>
                   평균 페이스: {strategy.avgPace}/km
                 </div>
-                <div style={{ fontSize: '0.8em' }}>
+                <div style={{ fontSize: isMobile ? '0.9em' : '0.8em' }}>
                   총 시간: {strategy.totalTime}
                 </div>
               </button>

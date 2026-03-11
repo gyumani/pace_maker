@@ -42,6 +42,17 @@ function App() {
     restingHR: 60
   });
   const [showProfile, setShowProfile] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  // 화면 크기 감지
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const parseTimeToSeconds = useCallback((timeStr: string): number => {
     if (!timeStr || timeStr.trim() === '') return 0;
@@ -445,8 +456,8 @@ function App() {
       {/* 탭 전환 UI */}
       <div style={{
         display: 'flex',
-        gap: '10px',
-        marginBottom: '20px',
+        gap: isMobile ? '8px' : '10px',
+        marginBottom: isMobile ? '15px' : '20px',
         borderBottom: '2px solid #e9ecef',
         paddingBottom: '10px'
       }}>
@@ -455,9 +466,10 @@ function App() {
           className={`btn ${tabMode === 'general' ? 'btn-primary' : 'btn-secondary'}`}
           style={{
             flex: 1,
-            padding: '15px',
-            fontSize: '1.1em',
-            fontWeight: 'bold'
+            padding: isMobile ? '12px' : '15px',
+            fontSize: isMobile ? '1em' : '1.1em',
+            fontWeight: 'bold',
+            minHeight: isMobile ? '50px' : 'auto'
           }}
         >
           📊 일반계산
@@ -467,9 +479,10 @@ function App() {
           className={`btn ${tabMode === 'route' ? 'btn-primary' : 'btn-secondary'}`}
           style={{
             flex: 1,
-            padding: '15px',
-            fontSize: '1.1em',
-            fontWeight: 'bold'
+            padding: isMobile ? '12px' : '15px',
+            fontSize: isMobile ? '1em' : '1.1em',
+            fontWeight: 'bold',
+            minHeight: isMobile ? '50px' : 'auto'
           }}
         >
           🗺️ 경로계산

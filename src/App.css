@@ -324,56 +324,141 @@ tbody tr:hover {
 
 /* 반응형 디자인 */
 @media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+
     .container {
-        padding: 20px;
-        margin: 10px;
+        padding: 15px;
+        margin: 0;
+        border-radius: 10px;
     }
-    
+
     header h1 {
-        font-size: 2em;
+        font-size: 1.8em;
     }
-    
+
+    header p {
+        font-size: 0.95em;
+    }
+
     .controls {
         flex-direction: column;
         align-items: center;
+        gap: 10px;
     }
-    
+
     .btn {
         width: 100%;
-        max-width: 300px;
+        max-width: 100%;
+        min-height: 44px;
+        padding: 12px 24px;
     }
-    
+
     .summary-cards {
         grid-template-columns: 1fr;
+        gap: 10px;
     }
-    
+
+    .card {
+        padding: 15px;
+    }
+
+    .card-value {
+        font-size: 1.5em;
+    }
+
     table {
+        font-size: 0.85em;
+    }
+
+    th, td {
+        padding: 8px 6px;
+    }
+
+    .pace-input {
+        width: 65px;
+        padding: 6px 8px;
         font-size: 0.9em;
     }
-    
-    th, td {
-        padding: 10px 8px;
+
+    .profile-section {
+        padding: 15px;
     }
-    
-    .pace-input {
-        width: 70px;
-        padding: 6px 8px;
+
+    .profile-inputs {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .instructions {
+        padding: 15px;
+    }
+
+    .instructions h3 {
+        font-size: 1.1em;
+    }
+
+    .instructions li {
+        font-size: 0.9em;
     }
 }
 
 @media (max-width: 480px) {
-    th, td {
-        padding: 8px 4px;
+    body {
+        padding: 5px;
     }
-    
-    .pace-input {
-        width: 60px;
-        padding: 4px 6px;
-        font-size: 0.9em;
+
+    .container {
+        padding: 10px;
     }
-    
-    .card-value {
+
+    header h1 {
         font-size: 1.5em;
+    }
+
+    header p {
+        font-size: 0.85em;
+    }
+
+    th, td {
+        padding: 6px 4px;
+        font-size: 0.8em;
+    }
+
+    .pace-input {
+        width: 55px;
+        padding: 4px 6px;
+        font-size: 0.85em;
+    }
+
+    .card-value {
+        font-size: 1.3em;
+    }
+
+    .card {
+        padding: 12px;
+    }
+
+    .btn {
+        padding: 10px 18px;
+        font-size: 0.95em;
+    }
+
+    .profile-section {
+        padding: 12px;
+    }
+
+    .instructions {
+        padding: 12px;
+    }
+
+    .instructions h3 {
+        font-size: 1em;
+    }
+
+    .instructions li {
+        font-size: 0.85em;
     }
 }
 
