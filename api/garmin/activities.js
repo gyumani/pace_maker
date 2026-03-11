@@ -1,8 +1,8 @@
 /**
- * Vercel Serverless Function: Garmin Profile
- * POST /api/garmin/profile
+ * Vercel Serverless Function: Garmin Activities
+ * POST /api/garmin/activities
  */
-const { getUserProfile } = require('./_lib/garmin');
+const { getRecentActivities } = require('../_lib/garmin');
 
 module.exports = async (req, res) => {
   // CORS 헤더 설정
@@ -27,6 +27,7 @@ module.exports = async (req, res) => {
 
   try {
     const { email, password } = req.body;
+    const limit = parseInt(req.query.limit) || 10;
 
     if (!email || !password) {
       return res.status(400).json({
@@ -35,14 +36,15 @@ module.exports = async (req, res) => {
       });
     }
 
-    const profile = await getUserProfile(email, password);
+    const activities = await getRecentActivities(email, password, limit);
 
     res.status(200).json({
       success: true,
-      data: profile
+      data: activities,
+      count: activities.length
     });
   } catch (error) {
-    console.error('Profile API Error:', error);
+    console.error('Activities API Error:', error);
     res.status(500).json({
       success: false,
       error: error.message
