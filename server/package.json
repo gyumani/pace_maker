@@ -1,0 +1,19 @@
+{
+  "name": "pace-calculator-server",
+  "version": "1.0.0",
+  "description": "Backend server for Garmin Connect integration",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "garmin-connect": "^1.5.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}

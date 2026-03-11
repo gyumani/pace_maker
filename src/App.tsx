@@ -1,6 +1,8 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import * as XLSX from 'sheetjs-style';
 import RouteCalculation from './components/RouteCalculation';
+import ProfileInput from './components/ProfileInput';
+import type { UserProfile } from './types/profile';
 import './App.css';
 
 interface PaceRow {
@@ -12,16 +14,6 @@ interface PaceRow {
   runningAvg: string;
   targetHeartRate?: string;
   intensityZone?: string;
-}
-
-interface UserProfile {
-  height: number;
-  weight: number;
-  age: number;
-  vo2max: number;
-  bmi?: number;
-  maxHeartRate?: number;
-  restingHR?: number;
 }
 
 type TabMode = 'general' | 'route';
@@ -273,19 +265,24 @@ function App() {
 
   const updateUserProfile = (field: keyof UserProfile, value: number) => {
     const updatedProfile = { ...userProfile, [field]: value };
-    
+
     // BMI 자동 계산
     if (field === 'height' || field === 'weight') {
       updatedProfile.bmi = calculateBMI(updatedProfile.height, updatedProfile.weight);
     }
-    
+
     // 최대 심박수 자동 계산
     if (field === 'age') {
       updatedProfile.maxHeartRate = calculateMaxHeartRate(updatedProfile.age);
     }
-    
+
     setUserProfile(updatedProfile);
   };
+
+  // 프로필 전체 로드 (Garmin 또는 쿠키에서)
+  const handleProfileLoad = useCallback((profile: UserProfile) => {
+    setUserProfile(profile);
+  }, []);
 
   const exportToExcel = useCallback(() => {
     const data = [];
@@ -393,63 +390,12 @@ function App() {
         </button>
 
         {showProfile && (
-          <div className="profile-section">
-            <h3>🏃‍♂️ 사용자 프로필</h3>
-            <div className="profile-inputs">
-              <div className="input-group">
-                <label>키 (cm):</label>
-                <input
-                  type="number"
-                  value={userProfile.height || ''}
-                  onChange={(e) => updateUserProfile('height', Number(e.target.value))}
-                  placeholder="170"
-                />
-              </div>
-              <div className="input-group">
-                <label>체중 (kg):</label>
-                <input
-                  type="number"
-                  value={userProfile.weight || ''}
-                  onChange={(e) => updateUserProfile('weight', Number(e.target.value))}
-                  placeholder="70"
-                />
-              </div>
-              <div className="input-group">
-                <label>나이:</label>
-                <input
-                  type="number"
-                  value={userProfile.age || ''}
-                  onChange={(e) => updateUserProfile('age', Number(e.target.value))}
-                  placeholder="30"
-                />
-              </div>
-              <div className="input-group">
-                <label>VO2Max:</label>
-                <input
-                  type="number"
-                  value={userProfile.vo2max || ''}
-                  onChange={(e) => updateUserProfile('vo2max', Number(e.target.value))}
-                  placeholder="45"
-                />
-              </div>
-            </div>
-            {userProfile.bmi && userProfile.bmi > 0 && (
-              <div className="calculated-values">
-                <div className="calc-item">
-                  <strong>BMI:</strong> {userProfile.bmi}
-                  {userProfile.bmi < 18.5 && <span className="bmi-status"> (저체중)</span>}
-                  {userProfile.bmi >= 18.5 && userProfile.bmi < 25 && <span className="bmi-status"> (정상)</span>}
-                  {userProfile.bmi >= 25 && userProfile.bmi < 30 && <span className="bmi-status"> (과체중)</span>}
-                  {userProfile.bmi >= 30 && <span className="bmi-status"> (비만)</span>}
-                </div>
-                {userProfile.maxHeartRate && (
-                  <div className="calc-item">
-                    <strong>최대 심박수:</strong> {userProfile.maxHeartRate}bpm
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+          <ProfileInput
+            userProfile={userProfile}
+            onProfileChange={updateUserProfile}
+            onProfileLoad={handleProfileLoad}
+            calculateBMI={calculateBMI}
+          />
         )}
       </div>
 

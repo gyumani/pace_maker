@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import { LatLngExpression, Icon } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import * as XLSX from 'sheetjs-style';
 import type { RoutePoint, OSRMRoute, RouteCalculationResult, PaceStrategy, ElevationPoint } from '../types/route';
 import { osrmService } from '../services/osrmService';
 import { elevationService } from '../services/elevationService';
@@ -277,6 +278,92 @@ export default function RouteCalculation({ userProfile }: RouteCalculationProps)
 
   // 선택된 전략 데이터
   const currentStrategy = strategies.find(s => s.strategy === selectedStrategy);
+
+  // 엑셀 다운로드
+  const exportToExcel = useCallback(() => {
+    if (!currentStrategy || !route) return;
+
+    const data = [];
+
+    // 제목 및 경로 정보
+    data.push(['📍 경로 계산 결과']);
+    data.push([]);
+    data.push(['경로 정보']);
+    if (startPoint) data.push(['출발지', `위도 ${startPoint.lat.toFixed(6)}, 경도 ${startPoint.lng.toFixed(6)}`]);
+    if (waypoints.length > 0) {
+      waypoints.forEach((wp, idx) => {
+        data.push([`경유지 ${idx + 1}`, `위도 ${wp.lat.toFixed(6)}, 경도 ${wp.lng.toFixed(6)}`]);
+      });
+    }
+    if (endPoint) data.push(['도착지', `위도 ${endPoint.lat.toFixed(6)}, 경도 ${endPoint.lng.toFixed(6)}`]);
+    data.push(['총 거리', `${currentStrategy.totalDistance.toFixed(2)} km`]);
+    data.push(['총 고도 상승', `+${currentStrategy.totalElevationGain.toFixed(0)}m`]);
+    data.push(['총 고도 하강', `-${currentStrategy.totalElevationLoss.toFixed(0)}m`]);
+    data.push([]);
+
+    // 전략 정보
+    data.push(['페이스 전략']);
+    const strategyName = currentStrategy.strategy === 'best' ? '🏆 최상 전략' :
+                        currentStrategy.strategy === 'average' ? '⚖️ 평균 전략' : '🐢 안전 전략';
+    data.push(['전략', strategyName]);
+    data.push(['총 시간', currentStrategy.totalTime]);
+    data.push(['평균 페이스', `${currentStrategy.avgPace}/km`]);
+    data.push(['평균 심박수', `${currentStrategy.avgHeartRate}bpm`]);
+    data.push([]);
+
+    // 구간별 데이터 헤더
+    data.push(['구간(km)', '고도(m)', '상승↗', '하강↘', '페이스', '구간시간', '누적시간', '심박수', '강도구간']);
+
+    // 구간별 데이터
+    currentStrategy.segments.forEach((segment) => {
+      data.push([
+        segment.km,
+        `${segment.elevation}m`,
+        segment.elevationGain > 0 ? `+${segment.elevationGain}m` : '-',
+        segment.elevationLoss > 0 ? `-${segment.elevationLoss}m` : '-',
+        `${segment.pace}/km`,
+        segment.pace,
+        segment.cumulativeTime,
+        `${segment.heartRate}bpm`,
+        segment.intensity
+      ]);
+    });
+
+    // 사용자 프로필 정보
+    data.push([]);
+    data.push(['사용자 프로필']);
+    data.push(['나이', `${userProfile.age}세`]);
+    if (userProfile.height > 0) data.push(['키', `${userProfile.height}cm`]);
+    if (userProfile.weight > 0) data.push(['체중', `${userProfile.weight}kg`]);
+    if (userProfile.vo2max > 0) data.push(['VO2Max', userProfile.vo2max]);
+    if (userProfile.restingHR) data.push(['안정시 심박수', `${userProfile.restingHR}bpm`]);
+    if (userProfile.maxHR) data.push(['최대 심박수', `${userProfile.maxHR}bpm`]);
+
+    // Excel 파일 생성
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(data);
+
+    // 컬럼 너비 설정
+    ws['!cols'] = [
+      {wch: 12}, // 구간(km)
+      {wch: 10}, // 고도
+      {wch: 10}, // 상승
+      {wch: 10}, // 하강
+      {wch: 12}, // 페이스
+      {wch: 12}, // 구간시간
+      {wch: 12}, // 누적시간
+      {wch: 12}, // 심박수
+      {wch: 12}  // 강도구간
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, '경로 계산');
+
+    // 파일명 생성 (날짜 포함)
+    const date = new Date().toISOString().split('T')[0];
+    const filename = `경로계산_${strategyName.replace(/[🏆⚖️🐢 ]/g, '')}_${date}.xlsx`;
+
+    XLSX.writeFile(wb, filename);
+  }, [currentStrategy, route, startPoint, endPoint, waypoints, userProfile]);
 
   return (
     <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', gap: isMobile ? '15px' : '20px' }}>
@@ -612,6 +699,17 @@ export default function RouteCalculation({ userProfile }: RouteCalculationProps)
                   <div className="card-title">평균 심박수</div>
                   <div className="card-value">{currentStrategy.avgHeartRate} bpm</div>
                 </div>
+              </div>
+
+              {/* 엑셀 다운로드 버튼 */}
+              <div style={{ marginBottom: '20px' }}>
+                <button
+                  onClick={exportToExcel}
+                  className="btn btn-secondary"
+                  style={{ width: '100%' }}
+                >
+                  📊 엑셀로 내보내기
+                </button>
               </div>
 
               {/* 구간별 상세 정보 */}
