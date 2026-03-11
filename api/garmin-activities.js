@@ -1,8 +1,8 @@
 /**
  * Vercel Serverless Function: Garmin Activities
- * POST /api/garmin-activities
+ * POST /api/garmin/activities
  */
-const { getRecentActivities } = require('../server/garminService');
+const { getRecentActivities } = require('./_lib/garmin');
 
 module.exports = async (req, res) => {
   // CORS 헤더 설정

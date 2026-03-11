@@ -1,8 +1,8 @@
 /**
  * Vercel Serverless Function: Garmin Profile
- * POST /api/garmin-profile
+ * POST /api/garmin/profile
  */
-const { getUserProfile } = require('../server/garminService');
+const { getUserProfile } = require('./_lib/garmin');
 
 module.exports = async (req, res) => {
   // CORS 헤더 설정
