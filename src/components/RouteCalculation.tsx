@@ -36,6 +36,15 @@ const waypointIcon = new Icon({
   shadowSize: [41, 41]
 });
 
+const currentLocationIcon = new Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
 interface RouteCalculationProps {
   userProfile: UserProfile;
 }
@@ -57,6 +66,78 @@ function MapViewController({ positions, shouldFit }: { positions: LatLngExpressi
 }
 
 /**
+ * 현재 위치로 지도 이동 컴포넌트
+ */
+function CurrentLocationButton({ onLocationUpdate }: { onLocationUpdate: (lat: number, lng: number) => void }) {
+  const map = useMap();
+  const [loading, setLoading] = useState(false);
+
+  const moveToCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      alert('이 브라우저는 위치 서비스를 지원하지 않습니다.');
+      return;
+    }
+
+    setLoading(true);
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+
+        // 지도 중심을 현재 위치로 이동
+        map.setView([lat, lng], 15, {
+          animate: true,
+          duration: 1
+        });
+
+        onLocationUpdate(lat, lng);
+        setLoading(false);
+      },
+      (error) => {
+        console.error('위치 가져오기 실패:', error);
+        alert('위치를 가져올 수 없습니다. 위치 서비스를 활성화해주세요.');
+        setLoading(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
+  };
+
+  return (
+    <button
+      onClick={moveToCurrentLocation}
+      disabled={loading}
+      style={{
+        position: 'absolute',
+        top: '80px',
+        right: '10px',
+        zIndex: 1000,
+        background: 'white',
+        border: '2px solid rgba(0,0,0,0.2)',
+        borderRadius: '4px',
+        padding: '8px 12px',
+        cursor: loading ? 'wait' : 'pointer',
+        fontSize: '1.2em',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '5px'
+      }}
+      title="내 위치로 이동"
+    >
+      <span>{loading ? '⏳' : '📍'}</span>
+      <span style={{ fontSize: '0.7em', fontWeight: 'bold' }}>
+        {loading ? '로딩중' : '내위치'}
+      </span>
+    </button>
+  );
+}
+
+/**
  * 경로 기반 페이스 계산 컴포넌트
  */
 export default function RouteCalculation({ userProfile }: RouteCalculationProps) {
@@ -71,6 +152,7 @@ export default function RouteCalculation({ userProfile }: RouteCalculationProps)
   const [strategies, setStrategies] = useState<RouteCalculationResult[]>([]);
   const [clickMode, setClickMode] = useState<'start' | 'waypoint' | 'end'>('start');
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [currentLocation, setCurrentLocation] = useState<RoutePoint | null>(null);
 
   // 화면 크기 감지
   useEffect(() => {
@@ -80,6 +162,15 @@ export default function RouteCalculation({ userProfile }: RouteCalculationProps)
 
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // 현재 위치 업데이트 콜백
+  const handleLocationUpdate = useCallback((lat: number, lng: number) => {
+    setCurrentLocation({
+      lat,
+      lng,
+      name: '현재 위치'
+    });
   }, []);
 
   // 지도 클릭 핸들러
@@ -263,6 +354,18 @@ export default function RouteCalculation({ userProfile }: RouteCalculationProps)
               </Marker>
             ))}
 
+            {currentLocation && (
+              <Marker position={[currentLocation.lat, currentLocation.lng]} icon={currentLocationIcon}>
+                <Popup>
+                  <strong>📍 현재 위치</strong>
+                  <br />
+                  위도: {currentLocation.lat.toFixed(6)}
+                  <br />
+                  경도: {currentLocation.lng.toFixed(6)}
+                </Popup>
+              </Marker>
+            )}
+
             {routeCoordinates.length > 0 && (
               <Polyline
                 positions={routeCoordinates}
@@ -274,6 +377,7 @@ export default function RouteCalculation({ userProfile }: RouteCalculationProps)
 
             <MapViewController positions={allPositions} shouldFit={route !== null} />
             <MapClickHandler />
+            <CurrentLocationButton onLocationUpdate={handleLocationUpdate} />
           </MapContainer>
 
           {loading && (
@@ -426,6 +530,7 @@ export default function RouteCalculation({ userProfile }: RouteCalculationProps)
               setStrategies([]);
               setError(null);
               setClickMode('start');
+              setCurrentLocation(null);
             }}
             className="btn btn-danger"
             style={{ width: '100%' }}
@@ -555,6 +660,7 @@ export default function RouteCalculation({ userProfile }: RouteCalculationProps)
         <div className="instructions">
           <h3>📍 경로 계산 사용법</h3>
           <ul>
+            <li><strong>📍 내 위치:</strong> 지도 오른쪽 상단의 "📍 내위치" 버튼을 눌러 현재 GPS 위치로 지도를 이동할 수 있습니다 (파란색 마커)</li>
             <li><strong>1단계:</strong> 출발지, 경유지, 도착지 버튼을 눌러 모드를 선택하세요</li>
             <li><strong>2단계:</strong> 지도를 클릭하여 지점을 추가하세요</li>
             <li><strong>경유지:</strong> 필요한 만큼 경유지를 추가할 수 있습니다 (노란색 마커)</li>
