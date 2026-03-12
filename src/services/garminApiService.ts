@@ -45,7 +45,7 @@ class GarminApiService {
    */
   async checkHealth(): Promise<boolean> {
     try {
-      const response = await fetch(`${API_BASE_URL}/health`);
+      const response = await fetch(`${API_BASE_URL}/api/health`);
       const data = await response.json();
       return data.status === 'ok';
     } catch (error) {

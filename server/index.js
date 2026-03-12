@@ -13,7 +13,7 @@ app.use(express.json());
 /**
  * Health Check
  */
-app.get('/health', (req, res) => {
+app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Pace Calculator Server is running' });
 });
 
@@ -107,7 +107,7 @@ app.use((err, req, res, next) => {
 // 서버 시작
 app.listen(PORT, () => {
   console.log(`🚀 Pace Calculator Server is running on port ${PORT}`);
-  console.log(`📍 Health check: http://localhost:${PORT}/health`);
+  console.log(`📍 Health check: http://localhost:${PORT}/api/health`);
   console.log(`🏃 Garmin API: http://localhost:${PORT}/api/garmin/*`);
   console.log(`ℹ️  Garmin credentials will be provided via API requests`);
 });
